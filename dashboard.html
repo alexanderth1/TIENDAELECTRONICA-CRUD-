@@ -1,0 +1,75 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Tienda Electrónica - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/estilos.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Panel de Control <span style="font-size:15px;color:#64748b;">(Rol: {{ROL_USUARIO}})</span>
+            <a class="logout-link" href="/logout">Salir</a>
+        </h2>
+        
+        <div class="nav-links">
+            <button id="btn-listado" class="active">Ver Listado</button>
+            <button id="btn-gestion">Módulo de Gestión</button>
+        </div>
+
+        <!-- VISTA 1: TABLA DE PRODUCTOS -->
+        <div id="vista-listado" class="seccion-panel active">
+            <h3>Lista de Productos</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- {{TABLA_PRODUCTOS}} -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- VISTA 2: FORMULARIOS DE GESTIÓN (AGREGAR, ACTUALIZAR, ELIMINAR) -->
+        <div id="vista-gestion" class="seccion-panel">
+            <h3>Agregar Producto</h3>
+            <form method="POST" action="/crear">
+                <label>Nombre del Producto:</label><br>
+                <input type="text" name="nombre" required><br>
+                <label>Precio:</label><br>
+                <input type="text" name="precio" required><br>
+                <label>Stock Inicial:</label><br>
+                <input type="text" name="stock" required><br>
+                <input type="submit" value="Guardar Producto">
+            </form>
+
+            <h3>Actualizar Producto</h3>
+            <form method="POST" action="/actualizar">
+                <label>ID del Producto a modificar:</label><br>
+                <input type="number" name="id" required><br>
+                <label>Nuevo Nombre:</label><br>
+                <input type="text" name="nombre" required><br>
+                <label>Nuevo Precio:</label><br>
+                <input type="text" name="precio" required><br>
+                <label>Nuevo Stock:</label><br>
+                <input type="text" name="stock" required><br>
+                <input type="submit" value="Actualizar Producto">
+            </form>
+
+            <h3>Eliminar Producto</h3>
+            <form method="POST" action="/eliminar">
+                <label>ID del Producto a eliminar:</label><br>
+                <input type="number" name="id" required><br>
+                <input type="submit" class="btn-danger" value="Eliminar Producto">
+            </form>
+        </div>
+    </div>
+    <script src="/app.js"></script>
+</body>
+</html>
