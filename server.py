@@ -132,6 +132,10 @@ class TiendaHandler(BaseHTTPRequestHandler):
                 html = html.replace('{{ROL_USUARIO}}', str(SESION['rol']))
                 # ¡SEGUNDA CORRECCIÓN AQUÍ!
                 html = html.replace('<!-- {{TABLA_PRODUCTOS}} -->', tabla_productos)
+
+                if SESION.get('rol') != 'administrador':
+                    estilos_ocultos = "<style>#btn-gestion, #vista-gestion { display: none !important; }</style>\n</head>"
+                    html = html.replace('</head>', estilos_ocultos)
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html; charset=utf-8')
@@ -178,6 +182,7 @@ class TiendaHandler(BaseHTTPRequestHandler):
                 self.send_response(303)
                 self.send_header('Location', f'/?error=Error+SQL:+{str(e)}')
                 self.end_headers()
+            return
 
         elif ruta == '/crear':
             nombre = datos.get('nombre')[0] if 'nombre' in datos else ''
