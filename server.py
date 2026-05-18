@@ -1,15 +1,25 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 import sqlite3
+import hashlib
+
+def hash_password(password):
+    """Convierte una contraseña en texto plano a un hash SHA-256"""
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 def init_db():
     conn = sqlite3.connect(':memory:')
     cursor = conn.cursor()
     cursor.execute('CREATE TABLE usuarios (id INTEGER PRIMARY KEY, usuario TEXT, clave TEXT, rol TEXT)')
     cursor.execute('CREATE TABLE productos (id INTEGER PRIMARY KEY, nombre TEXT, precio REAL, stock INTEGER)')
+    
+    # Hasheamos las contraseñas antes de insertarlas
+    admin_password = hash_password('admin123')
+    cliente_password = hash_password('user123')
+    
     cursor.executemany('INSERT INTO usuarios (usuario, clave, rol) VALUES (?, ?, ?)', [
-        ('admin', 'admin123', 'administrador'),
-        ('comprador1', 'user123', 'cliente')
+        ('admin', admin_password, 'administrador'),
+        ('comprador1', cliente_password, 'cliente')
     ])
     cursor.executemany('INSERT INTO productos (nombre, precio, stock) VALUES (?, ?, ?)', [
         ('Teclado Mecánico RGB 75%', 85.00, 15),
@@ -18,6 +28,14 @@ def init_db():
         ('Alfombrilla XL', 15.00, 50)
     ])
     conn.commit()
+
+    # Comprobación en terminal
+    cursor.execute("SELECT * FROM usuarios")
+    print("\n--- REVISIÓN DE SEGURIDAD: USUARIOS EN LA BASE DE DATOS ---")
+    for u in cursor.fetchall():
+        print(f"ID: {u[0]} | Usuario: {u[1]} | Clave Guardada: {u[2][:15]}... | Rol: {u[3]}")
+    print("-----------------------------------------------------------\n")
+
     return conn
 
 db_conn = init_db()
@@ -26,7 +44,6 @@ SESION = {"usuario": None, "rol": None}
 class TiendaHandler(BaseHTTPRequestHandler):
 
     def responder_archivo(self, nombre_archivo, content_type):
-        """Lee y sirve cualquier tipo de archivo externo desde el disco"""
         try:
             with open(nombre_archivo, 'r', encoding='utf-8') as f:
                 contenido = f.read()
@@ -45,7 +62,6 @@ class TiendaHandler(BaseHTTPRequestHandler):
         ruta = url_parseada.path
         parametros = parse_qs(url_parseada.query)
 
-        # Enrutamiento de archivos estáticos de diseño y comportamiento
         if ruta == '/estilos.css':
             self.responder_archivo('estilos.css', 'text/css')
             return
@@ -68,7 +84,6 @@ class TiendaHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
 
-            # Cargar y procesar HTML de Login
             try:
                 with open('login.html', 'r', encoding='utf-8') as f:
                     html = f.read()
@@ -77,6 +92,7 @@ class TiendaHandler(BaseHTTPRequestHandler):
                 if "error" in parametros:
                     error_html = f'<div class="error">{parametros["error"][0]}</div>'
                 
+                # ¡PRIMERA CORRECCIÓN AQUÍ!
                 html = html.replace('<!-- {{ERROR_PLACEHOLDER}} -->', error_html)
                 
                 self.send_response(200)
@@ -94,7 +110,6 @@ class TiendaHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
 
-            # Obtener los productos desde la Base de Datos
             cursor = db_conn.cursor()
             cursor.execute("SELECT * FROM productos")
             productos = cursor.fetchall()
@@ -110,13 +125,12 @@ class TiendaHandler(BaseHTTPRequestHandler):
                 </tr>
                 '''
 
-            # Cargar y renderizar dinámicamente el HTML del Dashboard
             try:
                 with open('dashboard.html', 'r', encoding='utf-8') as f:
                     html = f.read()
                 
-                # Inyección de variables en las etiquetas ficticias creadas en el HTML
                 html = html.replace('{{ROL_USUARIO}}', str(SESION['rol']))
+                # ¡SEGUNDA CORRECCIÓN AQUÍ!
                 html = html.replace('<!-- {{TABLA_PRODUCTOS}} -->', tabla_productos)
                 
                 self.send_response(200)
@@ -139,11 +153,16 @@ class TiendaHandler(BaseHTTPRequestHandler):
         if ruta == '/login-procesar':
             username = datos.get('username')[0] if 'username' in datos else ''
             password = datos.get('password')[0] if 'password' in datos else ''
+            
+            # Convertimos la clave escrita por el usuario a Hash antes de buscarla
+            hashed_input_password = hash_password(password)
+            
             cursor = db_conn.cursor()
             query = "SELECT usuario, rol FROM usuarios WHERE usuario = ? AND clave = ?"
             
             try:
-                cursor.execute(query, (username, password))
+                # Comparamos el username con el Hash generado
+                cursor.execute(query, (username, hashed_input_password))
                 user = cursor.fetchone()
                 if user:
                     SESION['usuario'] = user[0]
